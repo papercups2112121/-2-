@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Розкладання товарів — прогрес</title>
+<style>
+  :root {
+    --bg: #F5F3EF;
+    --card: #FFFFFF;
+    --ink: #1F2A24;
+    --muted: #6B7570;
+    --line: #E4E0D8;
+    --accent: #2F6B4F;
+    --accent-soft: #E4F0E8;
+    --warn: #B8562F;
+    --warn-soft: #FBE9E1;
+    --header-bg: #F3EEE2;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    padding: 20px 14px 110px;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 20px; font-weight: 700; margin: 4px 0 2px; }
+  .sub { color: var(--muted); font-size: 13px; margin: 0 0 16px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  button {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    border-radius: 9px;
+    border: 1px solid var(--line);
+    background: var(--card);
+    color: var(--ink);
+    padding: 9px 14px;
+    cursor: pointer;
+  }
+  button.primary { background: var(--accent); color: white; border-color: var(--accent); }
+  button.danger { color: var(--warn); border-color: var(--warn); }
+  button:disabled { opacity: 0.5; cursor: default; }
+  textarea {
+    width: 100%; min-height: 140px; font-family: inherit; font-size: 14px;
+    padding: 10px; border-radius: 10px; border: 1px solid var(--line); resize: vertical;
+  }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .search {
+    width: 100%; font-size: 14px; padding: 10px 12px; border-radius: 10px;
+    border: 1px solid var(--line); margin-bottom: 10px;
+  }
+  .filters { display: flex; gap: 6px; margin-bottom: 10px; }
+  .filters button { flex: 1; padding: 8px; font-size: 12px; }
+  .filters button.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+  .tab-switch { display: flex; gap: 6px; margin-bottom: 14px; }
+  .tab-btn { flex: 1; padding: 9px; font-size: 13px; background: var(--bg); }
+  .tab-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+  input[type=file] { font-size: 13px; width: 100%; }
+
+  .import-review-list {
+    max-height: 420px; overflow-y: auto; border: 1px solid var(--line);
+    border-radius: 10px; padding: 4px 8px;
+  }
+  .import-review-row {
+    display: flex; align-items: flex-start; gap: 10px; padding: 8px 4px;
+    border-bottom: 1px solid var(--line);
+  }
+  .import-review-row:last-child { border-bottom: none; }
+  .import-review-row input[type=checkbox] {
+    width: 19px; height: 19px; flex-shrink: 0; margin-top: 1px; accent-color: var(--accent);
+  }
+  .import-review-text { flex: 1; font-size: 13.5px; word-break: break-word; }
+  .tag-header, .tag-item {
+    display: inline-block; font-size: 10px; font-weight: 700; border-radius: 5px;
+    padding: 2px 7px; margin-left: 6px; vertical-align: middle; cursor: pointer; user-select: none;
+    border: 1px solid transparent;
+  }
+  .tag-header { color: var(--warn); background: var(--warn-soft); }
+  .tag-item { color: var(--accent); background: var(--accent-soft); }
+  .tag-hint { font-size: 10px; color: var(--muted); }
+
+  /* sync status */
+  .sync-bar {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    font-size: 12px; color: var(--muted); flex-wrap: wrap;
+  }
+  .sync-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  .sync-dot.ok { background: var(--accent); }
+  .sync-dot.pending { background: var(--warn); animation: pulse 1s infinite; }
+  .sync-dot.off { background: var(--muted); }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+  .config-banner {
+    background: var(--warn-soft); border: 1px solid var(--warn); border-radius: 10px;
+    padding: 12px; font-size: 13px; margin-bottom: 14px; line-height: 1.5;
+  }
+  .config-banner code { background: rgba(0,0,0,0.06); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+
+  /* grouped list */
+  .section { border-bottom: 1px solid var(--line); }
+  .section:last-child { border-bottom: none; }
+  .header-row {
+    display: flex; align-items: center; gap: 8px; padding: 10px 4px;
+    background: var(--header-bg); border-radius: 8px; margin: 4px 0; cursor: pointer;
+  }
+  .header-row input[type=checkbox] { width: 20px; height: 20px; flex-shrink: 0; accent-color: var(--accent); }
+  .header-chevron { font-size: 11px; color: var(--muted); width: 14px; text-align: center; flex-shrink: 0; }
+  .header-name { font-weight: 700; font-size: 13.5px; flex: 1; word-break: break-word; }
+  .header-count { font-size: 11px; color: var(--muted); flex-shrink: 0; white-space: nowrap; }
+  .children { padding-left: 8px; }
+  .item-row {
+    display: flex; align-items: center; gap: 10px; padding: 9px 4px 9px 20px;
+    border-bottom: 1px solid var(--line);
+  }
+  .item-row:last-child { border-bottom: none; }
+  .item-row input[type=checkbox] { width: 20px; height: 20px; flex-shrink: 0; accent-color: var(--accent); }
+  .item-row.done .item-name { color: var(--muted); text-decoration: line-through; }
+  .item-name { font-size: 14px; flex: 1; word-break: break-word; }
+  .del-btn { border: none; background: none; color: var(--muted); font-size: 16px; padding: 2px 6px; cursor: pointer; }
+  .empty { text-align: center; color: var(--muted); font-size: 13px; padding: 30px 10px; }
+  #itemsList {
+    max-height: 55vh;
+    overflow-y: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 4px 6px;
+  }
+
+  .summary {
+    position: sticky; bottom: 0; background: var(--card); border: 1px solid var(--line);
+    border-radius: 14px; padding: 14px 16px; margin-top: 4px; box-shadow: 0 -4px 16px rgba(0,0,0,0.05);
+  }
+  .bar { height: 10px; border-radius: 6px; background: var(--warn-soft); overflow: hidden; margin-bottom: 10px; }
+  .bar-fill { height: 100%; background: var(--accent); transition: width 0.2s ease; }
+  .stats { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+  .stat { flex: 1; text-align: center; }
+  .stat .num { font-size: 20px; font-weight: 700; }
+  .stat .lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .stat.done .num { color: var(--accent); }
+  .stat.pending .num { color: var(--warn); }
+  .add-row { display: flex; gap: 8px; margin-top: 10px; }
+  .add-row input {
+    flex: 1; font-size: 14px; padding: 9px 10px; border-radius: 9px; border: 1px solid var(--line);
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📦 Розкладання товарів на складі</h1>
+  <p class="sub">Позначайте товар одразу після того, як він отримав своє постійне місце. Зміни бачать усі, хто відкриє цей файл.</p>
+
+  <div id="configBanner" class="config-banner" style="display:none;">
+    ⚠️ <strong>Спільна синхронізація ще не налаштована.</strong> Дані зараз зберігаються лише в цьому браузері й не будуть видні на інших пристроях.
+    Щоб усі керівники бачили той самий актуальний прогрес — потрібно один раз розгорнути бекенд (Google Таблиця + Apps Script, файл <code>pereskladannya_apps_script.gs</code>) і вставити отриманий URL у змінну <code>SCRIPT_URL</code> на початку файлу.
+  </div>
+
+  <div class="card">
+    <div class="sync-bar">
+      <span id="syncStatus"><span class="sync-dot off" id="syncDot"></span>—</span>
+      <button id="manualSaveBtn" class="primary">🔒 Зберегти зміни</button>
+    </div>
+  </div>
+
+  <div class="card" id="importCard">
+    <div class="tab-switch">
+      <button class="tab-btn active" data-tab="text">✍️ Вставити текст</button>
+      <button class="tab-btn" data-tab="pdf">📄 PDF</button>
+      <button class="tab-btn" data-tab="excel">📊 Excel</button>
+    </div>
+
+    <div id="tabText" class="tab-panel">
+      <div class="hint" style="margin-bottom:8px;">Встав список (кожен рядок — товар або заголовок розділу), потім натисни «Розпізнати».</div>
+      <textarea id="importText" placeholder="Стакани 180мл&#10;Стакан одношаровий 250мл біл.&#10;Стакан ДВ 340мл крафт&#10;Дно&#10;Дно 90мм біле&#10;..."></textarea>
+      <div class="toolbar" style="margin-top:10px; margin-bottom:0;">
+        <button class="primary" id="textRecognizeBtn">Розпізнати</button>
+      </div>
+    </div>
+
+    <div id="tabPdf" class="tab-panel" style="display:none;">
+      <div class="hint" style="margin-bottom:8px;">Обери PDF-файл. Заголовки розділів визначаються за розміром/жирністю шрифту. <strong>Нічого не додасться автоматично</strong> — далі буде список для перевірки.</div>
+      <input type="file" id="pdfFileInput" accept="application/pdf">
+    </div>
+
+    <div id="tabExcel" class="tab-panel" style="display:none;">
+      <div class="hint" style="margin-bottom:8px;">Обери файл Excel (.xlsx/.xls). Якщо на листі є кольорова заливка комірок — саме вона визначає заголовки. Інакше — за структурою рядків (об'єднані/вужчі). <strong>Нічого не додасться автоматично.</strong></div>
+      <input type="file" id="excelFileInput" accept=".xlsx,.xls,.csv">
+      <div id="excelSheetPicker" style="display:none; margin-top:10px;">
+        <div class="hint" style="margin-bottom:4px;">Лист:</div>
+        <select id="excelSheetSelect" class="search" style="margin-bottom:0;"></select>
+      </div>
+    </div>
+
+    <div id="importStatus" class="hint" style="margin-top:8px;"></div>
+
+    <div id="importReview" style="display:none; margin-top:14px;">
+      <div class="toolbar" style="margin-bottom:8px;">
+        <button id="importSelectAllBtn">Обрати все</button>
+        <button id="importDeselectAllBtn">Зняти всі</button>
+      </div>
+      <div class="hint" style="margin-bottom:8px;">
+        Клікни на позначку <span class="tag-header">заголовок</span>/<span class="tag-item">товар</span> біля рядка, щоб виправити роль. Зняті галочки взагалі не потраплять у список.
+      </div>
+      <div id="importReviewList" class="import-review-list"></div>
+      <div class="toolbar" style="margin-top:12px; margin-bottom:0;">
+        <button class="primary" id="importReplaceBtn">Замінити поточний список</button>
+        <button id="importAppendBtn">Додати до існуючого</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <input type="text" class="search" id="searchInput" placeholder="🔍 Пошук товару або заголовка...">
+    <div class="filters">
+      <button class="filter-btn active" data-filter="all">Всі</button>
+      <button class="filter-btn" data-filter="pending">Ще не знайшли місце</button>
+      <button class="filter-btn" data-filter="done">Вже переміщено</button>
+    </div>
+    <div class="toolbar" style="margin-bottom:10px;">
+      <button id="exportBtn">⬇️ Резервна копія (файл)</button>
+      <button id="importBackupBtn">⬆️ Відновити з файлу</button>
+      <input type="file" id="importBackupInput" accept="application/json" style="display:none;">
+    </div>
+    <div id="itemsList"></div>
+    <div class="add-row">
+      <input type="text" id="quickAddInput" placeholder="Додати один товар (без заголовка)...">
+      <button id="quickAddBtn">➕</button>
+    </div>
+  </div>
+
+  <div class="summary">
+    <div class="bar"><div class="bar-fill" id="barFill" style="width:0%"></div></div>
+    <div class="stats">
+      <div class="stat done">
+        <div class="num" id="doneCount">0 (0%)</div>
+        <div class="lbl">✅ вже на місці</div>
+      </div>
+      <div class="stat pending">
+        <div class="num" id="pendingCount">0 (0%)</div>
+        <div class="lbl">⏳ ще не знайшли місце</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ====================== CONFIG ======================
+// Встав сюди URL веб-додатку Apps Script (закінчується на /exec).
+// Інструкція — у файлі pereskladannya_apps_script.gs.
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwc_25WXGOaVeeJq2_fMBDHfD_xGx693iA-flrq8-t8NMB0Bl3-e-f7ILTOVP5v-6sC/exec';
+const LOCAL_KEY = 'pereskladannya:items:local';
+const isConfigured = SCRIPT_URL && SCRIPT_URL.indexOf('http') === 0;
+
+if (window['pdfjsLib']) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
+
+let items = [];              // {id, name, isHeader, done}
+let collapsed = new Set();   // header ids collapsed
+let currentFilter = 'all';
+let searchQuery = '';
+let extractedLines = [];     // {text, isHeader, selected}
+let excelWorkbook = null;
+
+let syncQueue = [];          // pending backend ops: {type, payload}
+let syncInFlight = false;
+let lastSyncedAt = null;
+
+function uid() { return 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+// ====================== BACKEND SYNC ======================
+async function backendCall(action, payload) {
+  const body = JSON.stringify(Object.assign({ action: action }, payload || {}));
+  const res = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: body,
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+  });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  if (data && data.error) throw new Error(data.error);
+  return data;
+}
+
+function setSyncUI(state, text) {
+  const dot = document.getElementById('syncDot');
+  const status = document.getElementById('syncStatus');
+  dot.className = 'sync-dot ' + state;
+  status.innerHTML = '';
+  status.appendChild(dot);
+  status.appendChild(document.createTextNode(text));
+}
+
+let lastKnownServerUpdatedAt = null;
+
+function queueOp(op) {
+  syncQueue.push(op);
+  processQueue();
+}
+
+async function processQueue() {
+  if (!isConfigured) return;
+  if (syncInFlight) return;
+  if (syncQueue.length === 0) {
+    setSyncUI('ok', lastSyncedAt ? ('Синхронізовано о ' + lastSyncedAt) : 'Синхронізовано');
+    return;
+  }
+  syncInFlight = true;
+  setSyncUI('pending', `Збереження... (${syncQueue.length})`);
+  const op = syncQueue[0];
+  try {
+    let result;
+    if (op.type === 'toggleItem') {
+      result = await backendCall('toggleItem', { id: op.id, done: op.done });
+    } else if (op.type === 'toggleGroup') {
+      result = await backendCall('toggleGroup', { ids: op.ids, done: op.done });
+    } else if (op.type === 'deleteItem') {
+      result = await backendCall('deleteItem', { id: op.id });
+    } else if (op.type === 'addItem') {
+      result = await backendCall('addItem', { item: op.item });
+    } else if (op.type === 'saveAll') {
+      result = await backendCall('saveAll', { items: serializeItems() });
+    }
+    if (result && result.lastUpdated) lastKnownServerUpdatedAt = result.lastUpdated;
+    syncQueue.shift();
+    lastSyncedAt = nowLabel();
+    syncInFlight = false;
+    processQueue();
+  } catch (err) {
+    syncInFlight = false;
+    setSyncUI('pending', '⚠️ Немає з’єднання, повторюємо…');
+    setTimeout(processQueue, 4000);
+  }
+}
+
+function nowLabel() {
+  const d = new Date();
+  return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+
+function serializeItems() {
+  return items.map(i => ({ id: i.id, name: i.name, isHeader: !!i.isHeader, done: !!i.done, standalone: !!i.standalone }));
+}
+
+async function loadData() {
+  if (!isConfigured) {
+    document.getElementById('configBanner').style.display = '';
+    setSyncUI('off', 'Локальний режим (без синхронізації)');
+    try {
+      const raw = localStorage.getItem(LOCAL_KEY);
+      items = raw ? JSON.parse(raw) : [];
+    } catch (e) { items = []; }
+    render();
+    return;
+  }
+  setSyncUI('pending', 'Завантаження...');
+  try {
+    const data = await backendCall('getAll', {});
+    items = (data.items || []).map(i => ({ id: i.id, name: i.name, isHeader: !!i.isHeader, done: !!i.done, standalone: !!i.standalone }));
+    lastKnownServerUpdatedAt = data.lastUpdated || null;
+    lastSyncedAt = nowLabel();
+    setSyncUI('ok', 'Синхронізовано о ' + lastSyncedAt);
+  } catch (err) {
+    setSyncUI('pending', '⚠️ Не вдалося завантажити: ' + (err.message || err));
+  }
+  render();
+}
+
+async function persistLocalOnly() {
+  try { localStorage.setItem(LOCAL_KEY, JSON.stringify(items)); } catch (e) {}
+}
+
+async function manualSaveAll() {
+  if (!isConfigured) {
+    await persistLocalOnly();
+    setSyncUI('ok', 'Збережено локально о ' + nowLabel());
+    return;
+  }
+  setSyncUI('pending', 'Збереження всього списку...');
+  try {
+    const result = await backendCall('saveAll', { items: serializeItems() });
+    if (result && result.lastUpdated) lastKnownServerUpdatedAt = result.lastUpdated;
+    syncQueue = [];
+    lastSyncedAt = nowLabel();
+    setSyncUI('ok', 'Синхронізовано о ' + lastSyncedAt);
+  } catch (err) {
+    setSyncUI('pending', '⚠️ Не вдалося зберегти: ' + (err.message || err));
+  }
+}
+
+document.getElementById('manualSaveBtn').onclick = manualSaveAll;
+
+// Periodic refresh — only while the tab is actually visible, only when there's
+// nothing of ours still saving, and only re-renders if the server's data actually
+// changed since we last saw it (avoids pointless requests + list flicker every 20s).
+setInterval(() => {
+  if (!isConfigured) return;
+  if (document.hidden) return;
+  if (syncQueue.length > 0 || syncInFlight) return;
+  backendCall('getAll', {}).then(data => {
+    if (data.lastUpdated && data.lastUpdated === lastKnownServerUpdatedAt) {
+      return; // nothing changed on the server since our last known state
+    }
+    items = (data.items || []).map(i => ({ id: i.id, name: i.name, isHeader: !!i.isHeader, done: !!i.done, standalone: !!i.standalone }));
+    lastKnownServerUpdatedAt = data.lastUpdated || null;
+    lastSyncedAt = nowLabel();
+    setSyncUI('ok', 'Синхронізовано о ' + lastSyncedAt);
+    render();
+  }).catch(() => { /* silent — keep last known state */ });
+}, 20000);
+
+// ====================== GROUPING ======================
+function buildSections() {
+  const structured = items.filter(i => !i.standalone);
+  const standalone = items.filter(i => i.standalone);
+  const sections = [];
+  let current = { header: null, children: [] };
+  structured.forEach(it => {
+    if (it.isHeader) {
+      if (current.header !== null || current.children.length > 0) sections.push(current);
+      current = { header: it, children: [] };
+    } else {
+      current.children.push(it);
+    }
+  });
+  sections.push(current);
+  if (standalone.length > 0) sections.push({ header: null, children: standalone });
+  return sections.filter(s => s.header || s.children.length > 0);
+}
+
+function matchesQuery(text) {
+  if (!searchQuery.trim()) return true;
+  return text.toLowerCase().includes(searchQuery.trim().toLowerCase());
+}
+function matchesFilter(child) {
+  if (currentFilter === 'done') return child.done;
+  if (currentFilter === 'pending') return !child.done;
+  return true;
+}
+
+function render() {
+  const listEl = document.getElementById('itemsList');
+  const sections = buildSections();
+  const filterActive = currentFilter !== 'all' || !!searchQuery.trim();
+
+  if (items.length === 0) {
+    listEl.innerHTML = '<div class="empty">Список порожній. Імпортуй товари вище.</div>';
+    updateStats();
+    return;
+  }
+
+  let html = '';
+  let anyVisible = false;
+
+  sections.forEach((section, sIdx) => {
+    const headerMatches = !!(section.header && matchesQuery(section.header.name));
+    const visibleChildren = section.children.filter(c => matchesFilter(c) && (headerMatches || matchesQuery(c.name)));
+    if (filterActive && visibleChildren.length === 0) return;
+
+    anyVisible = true;
+    const isCollapsed = filterActive ? false : collapsed.has(section.header ? section.header.id : ('__none_' + sIdx));
+    const childrenToShow = filterActive ? visibleChildren : section.children;
+
+    html += '<div class="section">';
+    if (section.header) {
+      const total = section.children.length;
+      const doneN = section.children.filter(c => c.done).length;
+      const allDone = total > 0 && doneN === total;
+      const noneDone = doneN === 0;
+      html += `<div class="header-row" data-header-id="${section.header.id}">
+        <input type="checkbox" class="header-cb" data-header-id="${section.header.id}" ${allDone ? 'checked' : ''} data-indeterminate="${(!allDone && !noneDone) ? '1' : '0'}">
+        <span class="header-chevron" data-toggle-collapse="${section.header.id}">${isCollapsed ? '▶' : '▼'}</span>
+        <span class="header-name" data-toggle-collapse="${section.header.id}">${escapeHtml(section.header.name)}</span>
+        <span class="header-count">${doneN}/${total}</span>
+        <button class="del-btn" data-del-header="${section.header.id}" title="Видалити заголовок (товари лишаться)">✕</button>
+      </div>`;
+    }
+    if (!isCollapsed) {
+      html += '<div class="children">';
+      if (childrenToShow.length === 0) {
+        html += '<div class="hint" style="padding:6px 20px;">Немає товарів у цьому розділі.</div>';
+      }
+      childrenToShow.forEach(c => {
+        html += `<div class="item-row ${c.done ? 'done' : ''}" data-id="${c.id}">
+          <input type="checkbox" ${c.done ? 'checked' : ''} data-idx="${c.id}" class="toggle-cb">
+          <div class="item-name">${escapeHtml(c.name)}</div>
+          <button class="del-btn" data-id="${c.id}" title="Видалити">✕</button>
+        </div>`;
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+  });
+
+  if (!anyVisible) {
+    html = '<div class="empty">Нічого не знайдено.</div>';
+  }
+
+  listEl.innerHTML = html;
+  // apply indeterminate state (must be set via JS property, not attribute)
+  listEl.querySelectorAll('.header-cb').forEach(cb => {
+    cb.indeterminate = cb.dataset.indeterminate === '1';
+  });
+
+  updateStats();
+}
+
+function updateStats() {
+  const allChildren = items.filter(i => !i.isHeader);
+  const total = allChildren.length;
+  const doneN = allChildren.filter(i => i.done).length;
+  const pendingN = total - doneN;
+  const donePct = total ? Math.round((doneN / total) * 100) : 0;
+  const pendingPct = total ? 100 - donePct : 0;
+  document.getElementById('doneCount').textContent = `${doneN} (${donePct}%)`;
+  document.getElementById('pendingCount').textContent = `${pendingN} (${pendingPct}%)`;
+  document.getElementById('barFill').style.width = donePct + '%';
+}
+
+// ====================== EVENTS: list interactions ======================
+document.getElementById('itemsList').addEventListener('click', async (e) => {
+  const chevronId = e.target.dataset && e.target.dataset.toggleCollapse;
+  if (chevronId) {
+    if (collapsed.has(chevronId)) collapsed.delete(chevronId); else collapsed.add(chevronId);
+    render();
+    return;
+  }
+  if (e.target.classList.contains('del-btn') && e.target.dataset.id) {
+    const id = e.target.dataset.id;
+    if (!confirm('Видалити цей товар зі списку?')) return;
+    items = items.filter(i => i.id !== id);
+    render();
+    if (isConfigured) queueOp({ type: 'deleteItem', id: id }); else persistLocalOnly();
+    return;
+  }
+  if (e.target.classList.contains('del-btn') && e.target.dataset.delHeader) {
+    const hid = e.target.dataset.delHeader;
+    if (!confirm('Видалити цей заголовок? Товари під ним залишаться в списку.')) return;
+    items = items.filter(i => i.id !== hid);
+    render();
+    if (isConfigured) queueOp({ type: 'deleteItem', id: hid }); else persistLocalOnly();
+    return;
+  }
+});
+
+document.getElementById('itemsList').addEventListener('change', async (e) => {
+  if (e.target.classList.contains('toggle-cb')) {
+    const id = e.target.dataset.idx;
+    const item = items.find(i => i.id === id);
+    if (item) item.done = e.target.checked;
+    patchItemRow(id);
+    if (isConfigured) queueOp({ type: 'toggleItem', id: id, done: item ? item.done : e.target.checked });
+    else persistLocalOnly();
+  } else if (e.target.classList.contains('header-cb')) {
+    const hid = e.target.dataset.headerId;
+    const section = buildSections().find(s => s.header && s.header.id === hid);
+    if (!section) return;
+    const total = section.children.length;
+    const doneN = section.children.filter(c => c.done).length;
+    const target = !(total > 0 && doneN === total); // if not all done -> mark all done; else unmark all
+    section.children.forEach(c => { c.done = target; });
+    render();
+    const ids = section.children.map(c => c.id);
+    if (isConfigured) queueOp({ type: 'toggleGroup', ids: ids, done: target });
+    else persistLocalOnly();
+  }
+});
+
+// Targeted DOM update for the single most common action (one checkbox click) —
+// avoids rebuilding the whole (potentially 1000+ row) list and losing scroll position.
+function patchItemRow(id) {
+  const item = items.find(i => i.id === id);
+  if (!item) { render(); return; }
+  const row = document.querySelector(`.item-row[data-id="${id}"]`);
+  if (row) {
+    row.classList.toggle('done', !!item.done);
+    const cb = row.querySelector('.toggle-cb');
+    if (cb) cb.checked = !!item.done;
+  }
+  const section = buildSections().find(s => s.header && s.children.some(c => c.id === id));
+  if (section) {
+    const total = section.children.length;
+    const doneN = section.children.filter(c => c.done).length;
+    const headerRow = document.querySelector(`.header-row[data-header-id="${section.header.id}"]`);
+    if (headerRow) {
+      const hcb = headerRow.querySelector('.header-cb');
+      if (hcb) { hcb.checked = total > 0 && doneN === total; hcb.indeterminate = doneN > 0 && doneN < total; }
+      const countEl = headerRow.querySelector('.header-count');
+      if (countEl) countEl.textContent = `${doneN}/${total}`;
+    }
+  }
+  updateStats();
+}
+
+document.getElementById('quickAddBtn').onclick = async () => {
+  const input = document.getElementById('quickAddInput');
+  const name = input.value.trim();
+  if (!name) return;
+  const newItem = { id: uid(), name, isHeader: false, done: false, standalone: true };
+  items.push(newItem);
+  input.value = '';
+  render();
+  if (isConfigured) queueOp({ type: 'addItem', item: newItem }); else persistLocalOnly();
+};
+document.getElementById('quickAddInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') document.getElementById('quickAddBtn').click();
+});
+
+document.getElementById('searchInput').addEventListener('input', (e) => {
+  searchQuery = e.target.value;
+  render();
+});
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentFilter = btn.dataset.filter;
+    render();
+  });
+});
+
+// ====================== BACKUP EXPORT/IMPORT (full file, safety net) ======================
+document.getElementById('exportBtn').onclick = () => {
+  const blob = new Blob([JSON.stringify(serializeItems(), null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const stamp = new Date().toISOString().slice(0, 10);
+  a.href = url; a.download = `pereskladannya-progress-${stamp}.json`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+document.getElementById('importBackupBtn').onclick = () => document.getElementById('importBackupInput').click();
+document.getElementById('importBackupInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    if (!Array.isArray(parsed)) throw new Error('Невірний формат файлу');
+    if (items.length > 0 && !confirm('Це замінить поточний список даними з файлу копії. Продовжити?')) { e.target.value = ''; return; }
+    items = parsed.map(i => ({ id: i.id || uid(), name: i.name, isHeader: !!i.isHeader, done: !!i.done, standalone: !!i.standalone }));
+    render();
+    if (isConfigured) queueOp({ type: 'saveAll' }); else persistLocalOnly();
+  } catch (err) {
+    setSyncUI('pending', '⚠️ Не вдалося прочитати файл: ' + (err.message || err));
+  }
+  e.target.value = '';
+});
+
+// ====================== IMPORT: text / pdf / excel ======================
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.dataset.tab;
+    document.getElementById('tabText').style.display = tab === 'text' ? '' : 'none';
+    document.getElementById('tabPdf').style.display = tab === 'pdf' ? '' : 'none';
+    document.getElementById('tabExcel').style.display = tab === 'excel' ? '' : 'none';
+    setImportStatus('');
+    extractedLines = [];
+    renderImportReview();
+  });
+});
+
+function setImportStatus(msg) { document.getElementById('importStatus').textContent = msg; }
+
+function renderImportReview() {
+  const listEl = document.getElementById('importReviewList');
+  document.getElementById('importReview').style.display = extractedLines.length ? '' : 'none';
+  listEl.innerHTML = extractedLines.map((l, idx) => `
+    <div class="import-review-row">
+      <input type="checkbox" data-idx="${idx}" class="import-cb" ${l.selected ? 'checked' : ''}>
+      <div class="import-review-text">${escapeHtml(l.text)}
+        <span class="${l.isHeader ? 'tag-header' : 'tag-item'}" data-role-idx="${idx}">${l.isHeader ? 'заголовок' : 'товар'}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+document.getElementById('importReviewList').addEventListener('change', (e) => {
+  if (e.target.classList.contains('import-cb')) {
+    extractedLines[parseInt(e.target.dataset.idx, 10)].selected = e.target.checked;
+  }
+});
+document.getElementById('importReviewList').addEventListener('click', (e) => {
+  if (e.target.dataset.roleIdx !== undefined) {
+    const idx = parseInt(e.target.dataset.roleIdx, 10);
+    extractedLines[idx].isHeader = !extractedLines[idx].isHeader;
+    renderImportReview();
+  }
+});
+
+document.getElementById('importSelectAllBtn').onclick = () => { extractedLines.forEach(l => l.selected = true); renderImportReview(); };
+document.getElementById('importDeselectAllBtn').onclick = () => { extractedLines.forEach(l => l.selected = false); renderImportReview(); };
+
+async function commitImport(mode) {
+  const chosen = extractedLines.filter(l => l.selected);
+  if (chosen.length === 0) { setImportStatus('Нічого не обрано.'); return; }
+  const newItems = chosen.map(l => ({ id: uid(), name: l.text, isHeader: !!l.isHeader, done: false }));
+  if (mode === 'replace') {
+    if (items.length > 0 && !confirm('Це повністю замінить поточний список. Продовжити?')) return;
+    items = newItems;
+  } else {
+    const existing = new Set(items.filter(i => !i.isHeader).map(i => i.name.toLowerCase()));
+    const toAdd = newItems.filter(i => i.isHeader || !existing.has(i.name.toLowerCase()));
+    items = items.concat(toAdd);
+  }
+  render();
+  if (isConfigured) { await manualSaveAll(); } else { await persistLocalOnly(); setSyncUI('ok', 'Збережено локально о ' + nowLabel()); }
+  setImportStatus(`Додано в список: ${newItems.length}.`);
+  extractedLines = [];
+  renderImportReview();
+}
+document.getElementById('importReplaceBtn').onclick = () => commitImport('replace');
+document.getElementById('importAppendBtn').onclick = () => commitImport('append');
+
+// ---- text ----
+document.getElementById('textRecognizeBtn').onclick = () => {
+  const text = document.getElementById('importText').value;
+  const lines = text.split('\n').map(s => s.trim()).filter(Boolean);
+  if (lines.length === 0) { setImportStatus('Порожній список.'); return; }
+  extractedLines = lines.map(t => ({ text: t, isHeader: false, selected: true }));
+  renderImportReview();
+  setImportStatus(`Розпізнано рядків: ${extractedLines.length}. Познач заголовки вручну, клікнувши на позначку «товар» біля рядка.`);
+};
+
+// ---- PDF ----
+document.getElementById('pdfFileInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  extractedLines = []; renderImportReview();
+  setImportStatus('Читання PDF...');
+  try {
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    let rawLines = [];
+    for (let p = 1; p <= pdf.numPages; p++) {
+      setImportStatus(`Обробка сторінки ${p} з ${pdf.numPages}...`);
+      const page = await pdf.getPage(p);
+      const content = await page.getTextContent();
+      const lineMap = [];
+      content.items.forEach(it => {
+        if (!it.str || !it.str.trim()) return;
+        const y = Math.round(it.transform[5]);
+        const height = Math.abs(it.transform[3]) || 10;
+        const x = it.transform[4];
+        let line = lineMap.find(l => Math.abs(l.y - y) <= 2.5);
+        if (!line) { line = { y, items: [] }; lineMap.push(line); }
+        line.items.push({ x, str: it.str, height });
+      });
+      lineMap.sort((a, b) => b.y - a.y);
+      lineMap.forEach(line => {
+        line.items.sort((a, b) => a.x - b.x);
+        const text = line.items.map(i => i.str).join(' ').replace(/\s+/g, ' ').trim();
+        if (!text) return;
+        rawLines.push({ text, maxHeight: Math.max(...line.items.map(i => i.height)) });
+      });
+    }
+    if (rawLines.length === 0) { setImportStatus('Не вдалося знайти текст у файлі (можливо, скан без текстового шару).'); return; }
+    const heights = rawLines.map(l => l.maxHeight).sort((a, b) => a - b);
+    const median = heights[Math.floor(heights.length / 2)];
+    extractedLines = rawLines.map(l => {
+      const noDigits = !/\d/.test(l.text);
+      const isShort = l.text.length <= 28;
+      const biggerFont = l.maxHeight > median * 1.12;
+      const isHeader = biggerFont || (noDigits && isShort);
+      return { text: l.text, isHeader, selected: true };
+    });
+    renderImportReview();
+    setImportStatus(`Розпізнано рядків: ${extractedLines.length}. Перевір список нижче перед додаванням.`);
+  } catch (err) {
+    setImportStatus('⚠️ Не вдалося обробити файл: ' + (err.message || err));
+  }
+});
+
+// ---- Excel ----
+document.getElementById('excelFileInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  extractedLines = []; renderImportReview();
+  document.getElementById('excelSheetPicker').style.display = 'none';
+  setImportStatus('Читання файлу...');
+  try {
+    const buf = await file.arrayBuffer();
+    excelWorkbook = XLSX.read(buf, { type: 'array', cellStyles: true });
+    const names = excelWorkbook.SheetNames;
+    const sel = document.getElementById('excelSheetSelect');
+    sel.innerHTML = names.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+    if (names.length > 1) document.getElementById('excelSheetPicker').style.display = '';
+    processExcelSheet(names[0]);
+  } catch (err) {
+    setImportStatus('⚠️ Не вдалося прочитати файл: ' + (err.message || err));
+  }
+});
+document.getElementById('excelSheetSelect').addEventListener('change', (e) => processExcelSheet(e.target.value));
+
+function processExcelSheet(sheetName) {
+  if (!excelWorkbook) return;
+  setImportStatus(`Обробка листа «${sheetName}»...`);
+  const ws = excelWorkbook.Sheets[sheetName];
+  if (!ws || !ws['!ref']) { setImportStatus('Цей лист порожній.'); extractedLines = []; renderImportReview(); return; }
+
+  const merges = ws['!merges'] || [];
+  const mergedSingleRowWideRows = new Set();
+  merges.forEach(m => { if (m.s.r === m.e.r && m.e.c > m.s.c) mergedSingleRowWideRows.add(m.s.r); });
+
+  const range = XLSX.utils.decode_range(ws['!ref']);
+  const rows = [];
+  for (let r = range.s.r; r <= range.e.r; r++) {
+    const cellTexts = []; let anyBold = false; let anyFill = false;
+    for (let c = range.s.c; c <= range.e.c; c++) {
+      const addr = XLSX.utils.encode_cell({ r, c });
+      const cell = ws[addr];
+      if (!cell) continue;
+      if (cell.s && cell.s.patternType === 'solid') anyFill = true;
+      if (cell.s && cell.s.font && cell.s.font.bold) anyBold = true;
+      if (cell.v !== undefined && cell.v !== null && String(cell.v).trim() !== '') {
+        cellTexts.push(String(cell.w !== undefined ? cell.w : cell.v).trim());
+      }
+    }
+    if (cellTexts.length === 0) continue;
+    rows.push({ r, cellTexts, cellCount: cellTexts.length, anyBold, anyFill });
+  }
+  if (rows.length === 0) { setImportStatus('На цьому листі не знайдено заповнених рядків.'); extractedLines = []; renderImportReview(); return; }
+
+  const fillCount = rows.filter(row => row.anyFill).length;
+  let mode;
+  if (fillCount > 0) {
+    mode = 'fill';
+    extractedLines = rows.map(row => ({ text: row.cellTexts.join(' · '), isHeader: row.anyFill || row.anyBold, selected: true }));
+  } else {
+    mode = 'structure';
+    const freq = {};
+    rows.forEach(row => { freq[row.cellCount] = (freq[row.cellCount] || 0) + 1; });
+    let typical = 1, best = 0;
+    Object.entries(freq).forEach(([k, v]) => { if (v > best) { best = v; typical = parseInt(k, 10); } });
+    extractedLines = rows.map(row => {
+      const mergedHeader = mergedSingleRowWideRows.has(row.r);
+      const narrowerThanTypical = typical > 1 && row.cellCount < typical;
+      const isHeader = (mergedHeader && narrowerThanTypical) || row.anyBold;
+      return { text: row.cellTexts.join(' · '), isHeader, selected: true };
+    });
+  }
+  renderImportReview();
+  const modeLabel = mode === 'fill' ? 'за кольором заливки комірок' : 'за структурою рядків (заливки не знайдено)';
+  setImportStatus(`Розпізнано рядків: ${extractedLines.length} (заголовки визначено ${modeLabel}). Перевір список нижче перед додаванням.`);
+}
+
+loadData();
+</script>
+</body>
+</html>
